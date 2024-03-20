@@ -10,12 +10,11 @@ use Laragear\WebAuthn\Assertion\Validator\AssertionValidation;
 use Laragear\WebAuthn\Assertion\Validator\AssertionValidator;
 use Laragear\WebAuthn\Contracts\WebAuthnAuthenticatable;
 use Laragear\WebAuthn\Exceptions\AssertionException;
-
+use Laragear\WebAuthn\JsonTransport;
 use function class_implements;
 use function config;
 use function in_array;
 use function logger;
-use function request;
 
 /**
  * This class is not meant to be used directly.
@@ -85,7 +84,7 @@ class WebAuthnUserProvider extends EloquentUserProvider
     public function validateCredentials($user, array $credentials): bool
     {
         if ($user instanceof WebAuthnAuthenticatable && $this->isSignedChallenge($credentials)) {
-            return $this->validateWebAuthn($user);
+            return $this->validateWebAuthn($user, $credentials);
         }
 
         // If the fallback is enabled, we will validate the credential password.
@@ -95,12 +94,14 @@ class WebAuthnUserProvider extends EloquentUserProvider
     /**
      * Validate the WebAuthn assertion.
      */
-    protected function validateWebAuthn(WebAuthnAuthenticatable $user): bool
+    protected function validateWebAuthn(WebAuthnAuthenticatable $user, array $credentials): bool
     {
         try {
             // When we hit this method, we already have the user for the credential, so we will
             // pass it to the Assertion Validation data, thus avoiding fetching it again.
-            $this->validator->send(new AssertionValidation(request(), $user))->thenReturn();
+            $this->validator
+                ->send(new AssertionValidation(new JsonTransport($credentials), $user))
+                ->thenReturn();
         } catch (AssertionException $e) {
             // If we're debugging, like under local development, push the error to the logger.
             if (config('app.debug')) {
