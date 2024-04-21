@@ -11,7 +11,6 @@ use Laragear\WebAuthn\Assertion\Validator\AssertionValidator;
 use Laragear\WebAuthn\Contracts\WebAuthnAuthenticatable;
 use Laragear\WebAuthn\Exceptions\AssertionException;
 use Laragear\WebAuthn\JsonTransport;
-
 use function class_implements;
 use function config;
 use function in_array;
@@ -44,16 +43,19 @@ class WebAuthnUserProvider extends EloquentUserProvider
     public function retrieveByCredentials(array $credentials)
     {
         // If the user is WebAuthnAuthenticatable and the credentials are a signed Assertion
-        // Challenge response, we wil find the user that has this Credential ID. Otherwise,
-        // we will pass the credentials as-is to Laravel's vanilla Eloquent User Provider.
+        // Challenge response, we will add a simple query to the Auth User Provider to find
+        // the user for the Credential ID, while keeping the other credentials key values.
         if ($this->userIsWebAuthnAuthenticatable() && $this->isSignedChallenge($credentials)) {
-            /** @noinspection PhpIncompatibleReturnTypeInspection */
-            return $this->newModelQuery()
-                ->whereHas('webAuthnCredentials', static function (Builder $query) use ($credentials): void {
+            $id = $credentials['id'];
+
+            unset($credentials['id'], $credentials['rawId'], $credentials['response'], $credentials['type']);
+
+            $credentials = [...$credentials, static function (Builder $query) use ($id): void {
+                $query->whereHas('webAuthnCredentials', static function (Builder $query) use ($id): void {
                     // @phpstan-ignore-next-line
-                    $query->whereKey($credentials['id'])->whereEnabled();
-                })
-                ->first();
+                    $query->whereKey($id)->whereEnabled();
+                });
+            }];
         }
 
         return parent::retrieveByCredentials($credentials);
