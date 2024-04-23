@@ -10,10 +10,10 @@ use Laragear\WebAuthn\JsonTransport;
 class AttestationCreation
 {
     /**
-     * Create a new Attestation Instructions instance.
+     * Create a new Attestation Creation instance.
      */
     public function __construct(
-        public WebAuthnAuthenticatable $user,
+        public ?WebAuthnAuthenticatable $user,
         public ?ResidentKey $residentKey = null,
         public ?UserVerification $userVerification = null,
         public bool $uniqueCredentials = true,

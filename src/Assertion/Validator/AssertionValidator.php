@@ -30,5 +30,6 @@ class AssertionValidator extends Pipeline
         Pipes\CheckPublicKeySignature::class,
         Pipes\CheckPublicKeyCounterCorrect::class,
         Pipes\IncrementCredentialCounter::class,
+        Pipes\FireCredentialAssertedEvent::class,
     ];
 }

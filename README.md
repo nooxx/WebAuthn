@@ -5,7 +5,7 @@
 [![Codecov coverage](https://codecov.io/gh/Laragear/WebAuthn/branch/1.x/graph/badge.svg?token=HIngrvQeOj)](https://codecov.io/gh/Laragear/WebAuthn)
 [![CodeClimate Maintainability](https://api.codeclimate.com/v1/badges/39841b40ab4b05b8f9d3/maintainability)](https://codeclimate.com/github/Laragear/WebAuthn/maintainability)
 [![Sonarcloud Status](https://sonarcloud.io/api/project_badges/measure?project=Laragear_WebAuthn&metric=alert_status)](https://sonarcloud.io/dashboard?id=Laragear_WebAuthn)
-[![Laravel Octane Compatibility](https://img.shields.io/badge/Laravel%20Octane-Compatible-success?style=flat&logo=laravel)](https://laravel.com/docs/9.x/octane#introduction)
+[![Laravel Octane Compatibility](https://img.shields.io/badge/Laravel%20Octane-Compatible-success?style=flat&logo=laravel)](https://laravel.com/docs/11.x/octane#introduction)
 
 Authenticate users with Passkeys: fingerprints, patterns and biometric data.
 
@@ -32,7 +32,7 @@ Your support allows me to keep this package free, up-to-date and maintainable. A
 
 ## Requirements
 
-* Laravel 10.x or later.
+* Laravel 11.x or later.
 * PHP 8.1 or later.
 * The `ext-openssl` extension.
 * The `ext-sodium` extension (optional, for EdDSA 25519 public keys).
@@ -152,7 +152,7 @@ WebAuthnRoutes::register()->withoutMiddleware(VerifyCsrfToken::class);
 
 > [!TIP]
 > 
-> The [`@laragear/webpass` javascript helper](#5-use-the-javascript-helper) supports adding CSRF/XSRF tokens.
+> The [`@laragear/webpass` javascript helper](#5-use-the-javascript-helper) supports adding CSRF/XSRF tokens manually.
 
 The method allows to use different attestation and assertion paths, and even each of the controllers.
 
@@ -344,7 +344,7 @@ public function createChallenge(AssertionRequest $request)
 
 After that, you may receive the challenge using the `AssertedRequest` request object by just type-hinting it in the controller.
 
-Since the authentication is pretty much straightforward, you only need to check if the `login()` method returns the newly authenticated user or `null` when it fails. When it's a success, it will take care of [regenerating the session](https://laravel.com/docs/9.x/session#regenerating-the-session-id) for you.
+Since the authentication is pretty much straightforward, you only need to check if the `login()` method returns the newly authenticated user or `null` when it fails. When it's a success, it will take care of [regenerating the session](https://laravel.com/docs/11.x/session#regenerating-the-session-id) for you.
 
 ```php
 // app\Http\Controllers\WebAuthn\AssertionController.php
@@ -382,7 +382,7 @@ public function createChallenge(AssertionRequest $request)
 
 ### Password Fallback
 
-By default, the `eloquent-webauthn` can be used to log in users with passwords when the credentials are not a WebAuthn JSON payload. This way, your normal Authentication flow is unaffected:
+By default, the `eloquent-webauthn` can be used to log in users with passwords when the credentials are not a WebAuthn JSON payload, like a password. This way, your normal Authentication flow is unaffected:
 
 ```php
 // app\Http\Controllers\Auth\LoginController.php
@@ -400,15 +400,15 @@ public function login(Request $request)
 }
 ```
 
-You may disable the fallback to only allow WebAuthn authentication by [setting `password_fallback` to `false`](#1-add-the-eloquent-webauthn-driver). This may force you to handle classic user/password using a separate guard.
+You may disable the fallback to only allow WebAuthn authentication by [setting `password_fallback` to `false`](#1-add-the-webauthn-driver). This may force you to handle classic user/password using a separate guard.
 
 ### Detecting Cloned Credentials
 
 During assertion, the package will automatically detect if a Credential has been cloned by comparing how many times the user has logged in with it.
 
-If it's detected as cloned, the Credential is disabled, a [`CredentialCloned`](#events) event is fired, and the Assertion gets denied.
+When it's detected as cloned, the Credential will be immediately disabled, a [`CredentialCloned`](#events) event will be fired, and the Assertion gets denied.
 
-You can use the event to warn the user:
+You can use the event to warn the user.
 
 ```php
 use Illuminate\Support\Facades\Event;
@@ -421,7 +421,6 @@ Event::listen(CredentialCloned::class, function ($cloned) {
     $cloned->credential->user->notify($notification);
 });
 ```
-
 ## Managing Credentials
 
 The purpose of the `WebAuthnAuthenticatable` contract is to allow managing credentials within the User instance. The most useful methods are:
@@ -430,13 +429,13 @@ The purpose of the `WebAuthnAuthenticatable` contract is to allow managing crede
 * `flushCredentials()`: Removes all credentials. You can exclude credentials by their id.
 * `disableAllCredentials()`: Disables all credentials. You can exclude credentials by their id.
 * `makeWebAuthnCredential()`: Creates a new WebAuthn Credential instance.
-* `webAuthnCredentials()`: [One-to-Many](https://laravel.com/docs/9.x/eloquent-relationships#one-to-many-polymorphic-relations) relation to query for WebAuthn Credentials.
+* `webAuthnCredentials()`: [One-to-Many](https://laravel.com/docs/11.x/eloquent-relationships#one-to-many-polymorphic-relations) relation to query for WebAuthn Credentials.
 
 You can use these methods to, for example, find a credential to blacklist, or disable WebAuthn completely by flushing all registered devices.
 
 ## Events
 
-The following events are fired by this package, which you can [hook into in your application](https://laravel.com/docs/9.x/events):
+The following events are fired by this package, which you can [hook into in your application](https://laravel.com/docs/11.x/events):
 
 | Event                | Description                                                           |
 |----------------------|-----------------------------------------------------------------------|
@@ -444,10 +443,11 @@ The following events are fired by this package, which you can [hook into in your
 | `CredentialEnabled`  | A disabled WebAuthn Credential was enabled using `enable()`.          |
 | `CredentialDisabled` | A enabled WebAuthn Credential was disabled using `disable()`.         |
 | `CredentialCloned`   | A WebAuthn Credential was detected as cloned dring Assertion.         |
+| `CredentialAsserted` | A WebAuthn Credential was used to successfully complete Assertion.    |
 
 ## Manually Attesting and Asserting
 
-If you want to manually Attest and Assert users, you may instance their respective pipelines used for both WebAuthn Ceremonies:
+If you want to manually Attest and Assert users, for example to create users at the same time they register (attest) a device,  you may instance their respective pipelines used for both WebAuthn Ceremonies:
 
 | Pipeline               | Description                                                      |
 |------------------------|------------------------------------------------------------------|
@@ -456,10 +456,10 @@ If you want to manually Attest and Assert users, you may instance their respecti
 | `AssertionCreator`     | Creates a request to validate a WebAuthn Credential.             |
 | `AssertionValidator`   | Validates a response for a WebAuthn Credential.                  |
 
-All of these pipelines don't require the current Request JSON to work. You can either use the `makeFromRequest()` helper, or instance a `Laragear\WebAuthn\JsonTransport` manually with the required data.
+All of these pipelines don't require the current Request JSON to work. You can either use the `fromRequest()` helper, which will extract the required WebAuthn data from the current or issued Request instance, or instance a `Laragear\WebAuthn\JsonTransport` manually with the required data.
 
 ```php
-$assertion = AssertionValidation::fromRequest($request);
+$assertion = AssertionValidation::fromRequest();
 
 // Same as...
 $assertion = new AssertionValidation(new JsonTransport($request->json()->all()));
@@ -516,65 +516,7 @@ public function authenticate(Request $request, AssertionValidator $assertion)
 >
 > The pipes list and the pipes themselves are **not** covered by API changes, and are marked as `internal`. These may change between versions without notice.
 
-## Migrations
-
-This package comes with a migration file that extends a special class that takes most of the heavy lifting for you. You only need to create additional columns if you need to.
-
-```php
-use Illuminate\Database\Schema\Blueprint;
-use Laragear\WebAuthn\Database\WebAuthnCredentialsMigration;
-
-return new class extends WebAuthnCredentialsMigration {
-    /**
-     * Modify the migration for the WebAuthn Credentials.
-     */
-    public function modifyMigration(Blueprint $table): void
-    {
-        // You may add here your own columns...
-        //
-        // $table->string('device_name')->nullable();
-        // $table->string('device_type')->nullable();
-        // $table->timestamp('last_login_at')->nullable();
-    }
-};
-```
-
-If you need to modify the table, or adjust the data, after is created or before is dropped, you may use the `afterUp()` and `beforeDown()` methods of the migration file, respectively.
-
-```php
-use Illuminate\Database\Schema\Blueprint;
-use Laragear\WebAuthn\Database\WebAuthnCredentialsMigration;
-
-return new class extends WebAuthnCredentialsMigration {
-    // ...
-    
-    public function afterUp(Blueprint $table): void
-    {
-        $table->foreignId('device_serial')->references('serial')->on('devices');
-    }
-    
-    public function beforeDown(Blueprint $table): void
-    {
-        $table->dropForeign('device_serial')
-    }
-};
-```
-
-### UUID or ULID morphs
-
-There may be some scenarios where your _authenticatable_ User is using a different type of primary ID in the database, like UUID or ULID. If this is the case, you may change the morph type accordingly with the `$morphType` property.
-
-```php
-use Illuminate\Database\Schema\Blueprint;
-use Laragear\WebAuthn\Database\WebAuthnCredentialsMigration;
-
-return new class extends WebAuthnCredentialsMigration {
-
-    protected ?string $morphType = 'ulid';
-    
-    // ...
-};
-```
+## [Migrations](MIGRATIONS.md)
 
 ## Advanced Configuration
 
@@ -779,13 +721,13 @@ No. The user can use whatever to authenticate in your app. This may be enabled o
 
 Remember that your WebAuthn routes **must use Sessions**, because the Challenges are stored there.
 
-Session are automatically started on the `web` route group, or using the `StartSession` middleware directly. You can check this on your [HTTP Kernel Middleware](https://laravel.com/docs/9.x/middleware#middleware-groups).
+Session are automatically started on the `web` route group, or using the `StartSession` middleware directly. You can check this on your [HTTP Kernel Middleware](https://laravel.com/docs/11.x/middleware#middleware-groups).
 
 * **My ceremonies always fail. How I can debug this package?**
 
-If you have [debugging enabled](https://laravel.com/docs/9.x/configuration#debug-mode), like on development environments, the assertion data is logged in your [application logs](https://laravel.com/docs/9.x/logging).
+If you have [debugging enabled](https://laravel.com/docs/11.x/configuration#debug-mode), like on development environments, the assertion data is logged in your [application logs](https://laravel.com/docs/11.x/logging).
 
-The rest of errors are thrown as-is. You may want to log them manually using [Laravel's Error Handler](https://laravel.com/docs/10.x/errors) depending on the case. 
+The rest of errors are thrown as-is. You may want to log them manually using [Laravel's Error Handler](https://laravel.com/docs/11.x/errors) depending on the case. 
 
 * **Can I publish only some files?**
 

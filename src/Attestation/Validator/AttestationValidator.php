@@ -3,6 +3,7 @@
 namespace Laragear\WebAuthn\Attestation\Validator;
 
 use Illuminate\Pipeline\Pipeline;
+use Laragear\WebAuthn\SharedPipes\RequireWebAuthnUser;
 
 /**
  * @see https://www.w3.org/TR/webauthn-2/#sctn-registering-a-new-credential
@@ -17,6 +18,7 @@ class AttestationValidator extends Pipeline
      * @var array
      */
     protected $pipes = [
+        RequireWebAuthnUser::class,
         Pipes\RetrieveChallenge::class,
         Pipes\CompileClientDataJson::class,
         Pipes\CompileAttestationObject::class,

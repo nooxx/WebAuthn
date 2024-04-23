@@ -3,11 +3,13 @@
 namespace Laragear\WebAuthn\Attestation\Creator;
 
 use Illuminate\Pipeline\Pipeline;
+use Laragear\WebAuthn\Assertion\Creator\AssertionCreation;
+use Laragear\WebAuthn\SharedPipes\RequireWebAuthnUser;
 
 /**
  * @see https://www.w3.org/TR/webauthn-2/#sctn-registering-a-new-credential
  *
- * @method \Laragear\WebAuthn\Assertion\Creator\AssertionCreation thenReturn()
+ * @method AssertionCreation thenReturn()
  */
 class AttestationCreator extends Pipeline
 {
@@ -17,6 +19,7 @@ class AttestationCreator extends Pipeline
      * @var array
      */
     protected $pipes = [
+        RequireWebAuthnUser::class,
         Pipes\AddRelyingParty::class,
         Pipes\SetResidentKeyConfiguration::class,
         Pipes\MayRequireUserVerification::class,

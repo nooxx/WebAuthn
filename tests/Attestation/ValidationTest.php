@@ -24,10 +24,11 @@ use Laragear\WebAuthn\JsonTransport;
 use Laragear\WebAuthn\Models\WebAuthnCredential;
 use Mockery;
 use Ramsey\Uuid\Uuid;
+use Symfony\Component\HttpFoundation\ParameterBag;
 use Tests\DatabaseTestCase;
 use Tests\FakeAuthenticator;
 use Tests\Stubs\WebAuthnAuthenticatableUser;
-
+use UnexpectedValueException;
 use function base64_decode;
 use function base64_encode;
 use function hex2bin;
@@ -87,6 +88,36 @@ class ValidationTest extends DatabaseTestCase
     protected function validate(): AttestationValidation
     {
         return $this->validator->send($this->validation)->thenReturn();
+    }
+
+    public function test_throws_when_user_not_set(): void
+    {
+        $this->validation->user = null;
+
+        $this->expectException(UnexpectedValueException::class);
+        $this->expectExceptionMessage('There is no user set for the ceremony.');
+
+        $this->validate();
+    }
+
+    public function test_assertion_creates_from_request_instance(): void
+    {
+        $request = Request::create('/');
+        $request->headers->set('content-type', 'application/json');
+        $request->setJson(new ParameterBag([
+            ...FakeAuthenticator::attestationResponse(),
+            'foo' => 'bar',
+            'clientExtensionResults' => 'baz',
+            'authenticatorAttachment' => 'quz',
+        ]));
+
+        $validation = AttestationValidation::fromRequest($request);
+
+        static::assertEquals([
+            ...FakeAuthenticator::attestationResponse(),
+            'clientExtensionResults' => 'baz',
+            'authenticatorAttachment' => 'quz',
+        ], $validation->json->toArray());
     }
 
     public function test_validates_attestation_and_instances_webauthn_credential(): void

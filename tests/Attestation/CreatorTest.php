@@ -13,7 +13,7 @@ use Laragear\WebAuthn\Enums\UserVerification;
 use Ramsey\Uuid\Uuid;
 use Tests\DatabaseTestCase;
 use Tests\Stubs\WebAuthnAuthenticatableUser;
-
+use UnexpectedValueException;
 use function config;
 use function now;
 use function session;
@@ -50,6 +50,16 @@ class CreatorTest extends DatabaseTestCase
         return $this->createTestResponse(
             $this->creator->send($this->creation)->thenReturn()->json->toResponse(new Request()), null
         );
+    }
+
+    public function test_throws_when_not_set(): void
+    {
+        $this->creation->user = null;
+
+        $this->expectException(UnexpectedValueException::class);
+        $this->expectExceptionMessage('There is no user set for the ceremony.');
+
+        $this->response();
     }
 
     public function test_base_structure(): void

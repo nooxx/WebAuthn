@@ -4,6 +4,7 @@
 
 namespace Tests\Assertion;
 
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
@@ -21,11 +22,11 @@ use Laragear\WebAuthn\JsonTransport;
 use Laragear\WebAuthn\Models\WebAuthnCredential;
 use Mockery;
 use Ramsey\Uuid\Uuid;
+use Symfony\Component\HttpFoundation\ParameterBag;
 use Tests\DatabaseTestCase;
 use Tests\FakeAuthenticator;
 use Tests\Stubs\WebAuthnAuthenticatableUser;
 use Throwable;
-
 use function base64_decode;
 use function base64_encode;
 use function json_encode;
@@ -90,6 +91,26 @@ class ValidationTest extends DatabaseTestCase
     protected function validate(): AssertionValidation
     {
         return $this->validator->send($this->validation)->thenReturn();
+    }
+
+    public function test_assertion_creates_from_request_instance(): void
+    {
+        $request = Request::create('/');
+        $request->headers->set('content-type', 'application/json');
+        $request->setJson(new ParameterBag([
+            ...FakeAuthenticator::assertionResponse(),
+            'foo' => 'bar',
+            'clientExtensionResults' => 'baz',
+            'authenticatorAttachment' => 'quz',
+        ]));
+
+        $validation = AssertionValidation::fromRequest($request);
+
+        static::assertEquals([
+            ...FakeAuthenticator::assertionResponse(),
+            'clientExtensionResults' => 'baz',
+            'authenticatorAttachment' => 'quz',
+        ], $validation->json->toArray());
     }
 
     public function test_assertion_allows_user_instance(): void
