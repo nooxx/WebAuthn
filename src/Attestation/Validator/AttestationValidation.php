@@ -18,7 +18,7 @@ class AttestationValidation
      * @const array
      */
     public const REQUEST_KEYS = [
-        'id', 'rawId', 'response', 'type', 'origin', 'challenge', 'clientExtensionResults', 'authenticatorAttachment'
+        'id', 'rawId', 'response', 'type', 'origin', 'challenge', 'clientExtensionResults', 'authenticatorAttachment',
     ];
 
     /**
