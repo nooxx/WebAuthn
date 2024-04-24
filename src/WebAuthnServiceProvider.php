@@ -6,8 +6,8 @@ use Illuminate\Auth\AuthManager;
 use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\ServiceProvider;
+use Laragear\WebAuthn\Challenge\SessionChallengeRepository;
 use Laragear\WebAuthn\Contracts\WebAuthnAuthenticatable;
-
 use function method_exists;
 
 /**
@@ -34,6 +34,8 @@ class WebAuthnServiceProvider extends ServiceProvider
         $this->registerUser();
 
         $this->registerUserProvider();
+
+        $this->registerChallengeRepository();
 
         Models\WebAuthnCredential::$useTable = 'webauthn_credentials';
     }
@@ -129,5 +131,18 @@ class WebAuthnServiceProvider extends ServiceProvider
                 }
             );
         });
+    }
+
+    /**
+     * Register the default challenge repository.
+     */
+    protected function registerChallengeRepository(): void
+    {
+        $this->app->bindIf(
+            Contracts\WebAuthnChallengeRepository::class,
+            static function (Application $app): Contracts\WebAuthnChallengeRepository {
+                return $app->make(SessionChallengeRepository::class);
+            }
+        );
     }
 }

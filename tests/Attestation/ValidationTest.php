@@ -18,7 +18,7 @@ use Laragear\WebAuthn\Attestation\Validator\Pipes\CheckRelyingPartyHashSame;
 use Laragear\WebAuthn\Attestation\Validator\Pipes\CheckUserInteraction;
 use Laragear\WebAuthn\Attestation\Validator\Pipes\CredentialIdShouldNotBeDuplicated;
 use Laragear\WebAuthn\ByteBuffer;
-use Laragear\WebAuthn\Challenge;
+use Laragear\WebAuthn\Challenge\Challenge;
 use Laragear\WebAuthn\Exceptions\AttestationException;
 use Laragear\WebAuthn\JsonTransport;
 use Laragear\WebAuthn\Models\WebAuthnCredential;

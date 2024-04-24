@@ -518,6 +518,73 @@ public function authenticate(Request $request, AssertionValidator $assertion)
 
 ## [Migrations](MIGRATIONS.md)
 
+## Custom Challenge Repository
+
+Storing and pulling challenges is done through a _repository_. By default, this library includes a repository that uses your application Session, which is the most secure and easiest way to handle challenges.
+
+You may want to use your own, for example, like a shared cache between multiple application instances, or a custom database table. In any case, create a class implementing the `Laragear\WebAuthn\Contracts\WebAuthnChallengeRepository` contract (interface).
+
+```php
+namespace App\WebAuthn;
+
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Request;
+use Laragear\WebAuthn\Contracts\WebAuthnChallengeRepository;
+use Laragear\WebAuthn\Challenge\Challenge;
+
+class MyRepository implements WebAuthnChallengeRepository
+{
+    /**
+     * Puts a ceremony challenge into the repository.
+     */
+    public function store(Challenge $challenge): void
+    {  
+        Cache::store('redis')->put($fingerprint, $challenge, $challenge->expiresAt())
+    }
+
+    /**
+     * Pulls a ceremony challenge out from the repository, if it exists.
+     */
+    public function pull(): ?Challenge
+    {      
+        return Cache::store('redis')->pull($fingerprint);
+    }
+    
+    /**
+     * Create a fingerprint as a cache key.
+     */
+    protected function getFingerprint(): string
+    {
+        $user = Auth::user();
+        
+        // Use the IP, the user class and its auth identifier to build the cache key.
+        // This should ensure the challenge is unique for the IP and the user.
+        return implode('|', [
+            'webauthn_challenge', Request::ip(), get_class($user), $user->getAuthIdentifier()
+        ]);
+    }
+}
+```
+
+After that, _replace_ the default challenge repository resolver in the application container, ideally in your `register()` method of your `AppServiceProvider` class.
+
+```php
+namespace App\Providers;
+
+use App\WebAuthn\MyRepository;
+use Illuminate\Support\ServiceProvider;
+use Laragear\WebAuthn\Contracts\WebAuthnChallengeRepository;
+
+class AppServiceProvider extends ServiceProvider
+{
+    public function boot()
+    {
+        $this->app->register(WebAuthnChallengeRepository::class, fn () => new MyRepository())
+    }
+}
+```
+
 ## Advanced Configuration
 
 Laragear WebAuthn was made to work out-of-the-box, but you can override the configuration by simply publishing the config file.

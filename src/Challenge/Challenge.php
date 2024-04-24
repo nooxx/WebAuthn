@@ -1,8 +1,10 @@
 <?php
 
-namespace Laragear\WebAuthn;
+namespace Laragear\WebAuthn\Challenge;
 
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Date;
+use Laragear\WebAuthn\ByteBuffer;
 
 class Challenge
 {
@@ -17,6 +19,14 @@ class Challenge
         public int $expiresAt = 0,
     ) {
         $this->expiresAt = Date::now()->getTimestamp() + $this->timeout;
+    }
+
+    /**
+     * Returns the expiration time as a Carbon instance.
+     */
+    public function expiresAt(): Carbon
+    {
+        return Date::createFromTimestamp($this->expiresAt);
     }
 
     /**

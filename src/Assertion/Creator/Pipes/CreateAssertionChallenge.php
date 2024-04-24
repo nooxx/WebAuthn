@@ -3,15 +3,18 @@
 namespace Laragear\WebAuthn\Assertion\Creator\Pipes;
 
 use Closure;
+use Illuminate\Config\Repository as ConfigContract;
 use Laragear\WebAuthn\Assertion\Creator\AssertionCreation;
-use Laragear\WebAuthn\ChallengeRepository;
+use Laragear\WebAuthn\Challenge\Challenge;
+use Laragear\WebAuthn\Contracts\WebAuthnChallengeRepository as ChallengeRepositoryContract;
+use Laragear\WebAuthn\Enums\UserVerification;
 
 class CreateAssertionChallenge
 {
     /**
      * Create a new pipe instance.
      */
-    public function __construct(protected ChallengeRepository $challenge)
+    public function __construct(protected ChallengeRepositoryContract $challenge, protected ConfigContract $config)
     {
         //
     }
@@ -30,7 +33,16 @@ class CreateAssertionChallenge
             $options['credentials'] = $assertion->acceptedCredentials->map->getKey()->toArray();
         }
 
-        $assertion->json->set('challenge', $this->challenge->store($assertion->userVerification, $options)->data);
+        $challenge = Challenge::random(
+            $this->config->get('webauthn.challenge.bytes'),
+            $this->config->get('webauthn.challenge.timeout'),
+            $assertion->userVerification === UserVerification::REQUIRED,
+            $options
+        );
+
+        $assertion->json->set('challenge', $challenge->data);
+
+        $this->challenge->store($challenge);
 
         return $next($assertion);
     }

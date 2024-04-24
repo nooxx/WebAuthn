@@ -5,7 +5,7 @@ namespace Laragear\WebAuthn\SharedPipes;
 use Closure;
 use Laragear\WebAuthn\Assertion\Validator\AssertionValidation;
 use Laragear\WebAuthn\Attestation\Validator\AttestationValidation;
-use Laragear\WebAuthn\ChallengeRepository;
+use Laragear\WebAuthn\Contracts\WebAuthnChallengeRepository as ChallengeRepositoryContract;
 
 /**
  * This should be the first pipe to run, as the Challenge may expire by mere milliseconds.
@@ -19,7 +19,7 @@ abstract class RetrieveChallenge
     /**
      * Create a new pipe instance.
      */
-    public function __construct(protected ChallengeRepository $challenge)
+    public function __construct(protected ChallengeRepositoryContract $challenge)
     {
         //
     }

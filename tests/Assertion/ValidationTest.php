@@ -14,7 +14,7 @@ use Laragear\WebAuthn\Assertion\Validator\Pipes\CheckPublicKeyCounterCorrect;
 use Laragear\WebAuthn\Assertion\Validator\Pipes\CheckUserInteraction;
 use Laragear\WebAuthn\Attestation\AuthenticatorData;
 use Laragear\WebAuthn\ByteBuffer;
-use Laragear\WebAuthn\Challenge;
+use Laragear\WebAuthn\Challenge\Challenge;
 use Laragear\WebAuthn\Events\CredentialCloned;
 use Laragear\WebAuthn\Events\CredentialDisabled;
 use Laragear\WebAuthn\Exceptions\AssertionException;
@@ -90,6 +90,8 @@ class ValidationTest extends DatabaseTestCase
 
     protected function validate(): AssertionValidation
     {
+        $this->validation->user = $this->user;
+
         return $this->validator->send($this->validation)->thenReturn();
     }
 
@@ -173,7 +175,7 @@ class ValidationTest extends DatabaseTestCase
 
     public function test_assertion_increases_counter(): void
     {
-        static::assertInstanceOf(AssertionValidation::class, $this->validator->send($this->validation)->thenReturn());
+        static::assertInstanceOf(AssertionValidation::class, $this->validate());
 
         $this->assertDatabaseHas(WebAuthnCredential::class, [
             'id' => FakeAuthenticator::CREDENTIAL_ID,

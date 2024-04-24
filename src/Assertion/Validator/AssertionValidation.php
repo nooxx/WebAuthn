@@ -4,7 +4,7 @@ namespace Laragear\WebAuthn\Assertion\Validator;
 
 use Illuminate\Http\Request;
 use Laragear\WebAuthn\Attestation\AuthenticatorData;
-use Laragear\WebAuthn\Challenge;
+use Laragear\WebAuthn\Challenge\Challenge;
 use Laragear\WebAuthn\ClientDataJson;
 use Laragear\WebAuthn\Contracts\WebAuthnAuthenticatable;
 use Laragear\WebAuthn\JsonTransport;

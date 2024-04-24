@@ -1,35 +1,30 @@
 <?php
 
-namespace Laragear\WebAuthn;
+namespace Laragear\WebAuthn\Challenge;
 
 use Illuminate\Contracts\Config\Repository as ConfigContract;
 use Illuminate\Contracts\Session\Session as SessionContract;
-use Laragear\WebAuthn\Enums\UserVerification;
+use Laragear\WebAuthn\Contracts\WebAuthnChallengeRepository;
 
-class ChallengeRepository
+/**
+ * @internal
+ */
+class SessionChallengeRepository implements WebAuthnChallengeRepository
 {
     /**
      * Create a new challenge repository instance.
      */
     public function __construct(protected SessionContract $session, protected ConfigContract $config)
     {
+        //
     }
 
     /**
-     * Creates a challenge instance into the session using the given options.
+     * Puts a ceremony challenge into the repository.
      */
-    public function store(?UserVerification $verify, array $options = []): Challenge
+    public function store(Challenge $challenge): void
     {
-        $challenge = Challenge::random(
-            $this->config->get('webauthn.challenge.bytes'),
-            $this->config->get('webauthn.challenge.timeout'),
-            $verify === UserVerification::REQUIRED,
-            $options,
-        );
-
         $this->session->put($this->config->get('webauthn.challenge.key'), $challenge);
-
-        return $challenge;
     }
 
     /**
@@ -39,7 +34,7 @@ class ChallengeRepository
      */
     public function pull(): ?Challenge
     {
-        /** @var \Laragear\WebAuthn\Challenge $challenge */
+        /** @var \Laragear\WebAuthn\Challenge\Challenge|null $challenge */
         $challenge = $this->session->pull($this->config->get('webauthn.challenge.key'));
 
         // Only return the challenge if it's valid (not expired)
