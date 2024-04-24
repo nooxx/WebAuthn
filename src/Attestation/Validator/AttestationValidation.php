@@ -40,6 +40,7 @@ class AttestationValidation
      */
     public static function fromRequest(Request $request = null, WebAuthnAuthenticatable $user = null): static
     {
+        // @phpstan-ignore-next-line
         return new static($user, new JsonTransport(($request ?? app('request'))->only(static::REQUEST_KEYS)));
     }
 }

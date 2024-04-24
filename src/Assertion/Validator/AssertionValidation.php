@@ -40,6 +40,7 @@ class AssertionValidation
      */
     public static function fromRequest(Request $request = null): static
     {
+        // @phpstan-ignore-next-line
         return new static(new JsonTransport(($request ?? app('request'))->only(static::REQUEST_KEYS)));
     }
 }
