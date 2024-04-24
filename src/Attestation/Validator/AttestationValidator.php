@@ -19,10 +19,10 @@ class AttestationValidator extends Pipeline
      */
     protected $pipes = [
         RequireWebAuthnUser::class,
-        Pipes\RetrieveChallenge::class,
         Pipes\CompileClientDataJson::class,
         Pipes\CompileAttestationObject::class,
         Pipes\AttestationIsForCreation::class,
+        Pipes\RetrieveChallenge::class,
         Pipes\CheckChallengeSame::class,
         Pipes\CheckOriginSecure::class,
         Pipes\CheckRelyingPartyIdContained::class,
