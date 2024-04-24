@@ -9,7 +9,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Arr;
 use JsonSerializable;
 use Stringable;
-
 use function json_encode;
 
 /**
@@ -38,7 +37,7 @@ class JsonTransport implements Arrayable, Jsonable, JsonSerializable, Stringable
     /**
      * Retrieves a value from the underlying JSON array.
      */
-    public function get(string $key, string|int $default = null): string|int|null
+    public function get(string $key, string|int $default = null): mixed
     {
         return Arr::get($this->json, $key, $default);
     }
