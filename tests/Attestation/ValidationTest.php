@@ -29,6 +29,7 @@ use Tests\DatabaseTestCase;
 use Tests\FakeAuthenticator;
 use Tests\Stubs\WebAuthnAuthenticatableUser;
 use UnexpectedValueException;
+
 use function base64_decode;
 use function base64_encode;
 use function hex2bin;

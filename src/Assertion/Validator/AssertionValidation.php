@@ -18,11 +18,11 @@ class AssertionValidation
      * @const array
      */
     public const REQUEST_KEYS = [
-        'id', 'rawId', 'response', 'type', 'clientExtensionResults', 'authenticatorAttachment'
+        'id', 'rawId', 'response', 'type', 'clientExtensionResults', 'authenticatorAttachment',
     ];
 
     /**
-     * Create a new Assertion Validation instance
+     * Create a new Assertion Validation instance.
      */
     public function __construct(
         public JsonTransport $json,
