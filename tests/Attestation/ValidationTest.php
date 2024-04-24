@@ -9,6 +9,7 @@ use Illuminate\Contracts\Config\Repository as ConfigContract;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Laragear\WebAuthn\Attestation\AttestationObject;
 use Laragear\WebAuthn\Attestation\AuthenticatorData;
 use Laragear\WebAuthn\Attestation\Formats\None;
@@ -19,6 +20,7 @@ use Laragear\WebAuthn\Attestation\Validator\Pipes\CheckUserInteraction;
 use Laragear\WebAuthn\Attestation\Validator\Pipes\CredentialIdShouldNotBeDuplicated;
 use Laragear\WebAuthn\ByteBuffer;
 use Laragear\WebAuthn\Challenge\Challenge;
+use Laragear\WebAuthn\Events\CredentialAttested;
 use Laragear\WebAuthn\Exceptions\AttestationException;
 use Laragear\WebAuthn\JsonTransport;
 use Laragear\WebAuthn\Models\WebAuthnCredential;
@@ -29,7 +31,6 @@ use Tests\DatabaseTestCase;
 use Tests\FakeAuthenticator;
 use Tests\Stubs\WebAuthnAuthenticatableUser;
 use UnexpectedValueException;
-
 use function base64_decode;
 use function base64_encode;
 use function hex2bin;
@@ -666,5 +667,17 @@ class ValidationTest extends DatabaseTestCase
         $this->expectExceptionMessage('Attestation Error: Credential ID already exists in the database.');
 
         $this->validate();
+    }
+
+    public function test_attestation_dispatches_event_with_user(): void
+    {
+        $event = Event::fake(CredentialAttested::class);
+
+        $this->validate();
+
+        $event->assertDispatched(CredentialAttested::class, function (CredentialAttested $event): bool {
+            return $event->user === $this->user
+                && $event->credential === $this->validation->credential;
+        });
     }
 }

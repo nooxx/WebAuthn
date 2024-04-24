@@ -443,20 +443,27 @@ The following events are fired by this package, which you can [hook into in your
 | `CredentialEnabled`  | A disabled WebAuthn Credential was enabled using `enable()`.          |
 | `CredentialDisabled` | A enabled WebAuthn Credential was disabled using `disable()`.         |
 | `CredentialCloned`   | A WebAuthn Credential was detected as cloned dring Assertion.         |
+| `CredentialAttested` | A WebAuthn Credential was used to successfully complete Attestation.  |
 | `CredentialAsserted` | A WebAuthn Credential was used to successfully complete Assertion.    |
 
 ## Manually Attesting and Asserting
 
 If you want to manually Attest and Assert users, for example to create users at the same time they register (attest) a device,  you may instance their respective pipelines used for both WebAuthn Ceremonies:
 
-| Pipeline               | Description                                                      |
-|------------------------|------------------------------------------------------------------|
-| `AttestationCreator`   | Creates a request to create a WebAuthn Credential.               |
-| `AttestationValidator` | Validates a response with the WebAuthn Credential and stores it. |
-| `AssertionCreator`     | Creates a request to validate a WebAuthn Credential.             |
-| `AssertionValidator`   | Validates a response for a WebAuthn Credential.                  |
+| Pipeline               | Description                                          |
+|------------------------|------------------------------------------------------|
+| `AttestationCreator`   | Creates a request to create a WebAuthn Credential.   |
+| `AttestationValidator` | Validates a response with the WebAuthn Credential.   |
+| `AssertionCreator`     | Creates a request to validate a WebAuthn Credential. |
+| `AssertionValidator`   | Validates a response for a WebAuthn Credential.      |
 
-All of these pipelines don't require the current Request JSON to work. You can either use the `fromRequest()` helper, which will extract the required WebAuthn data from the current or issued Request instance, or instance a `Laragear\WebAuthn\JsonTransport` manually with the required data.
+> [!IMPORTANT]
+> 
+> The `AttestationValidator` instances a storable credential, it doesn't save it. This way you have the chance to alter the model with additional data before persisting.
+
+Compared to prior versions, these pipelines no longer require the current Request instance. Instead, these work with the JSON input of the request. 
+
+You can either use the `fromRequest()` helper, which will extract the required WebAuthn data from the current or issued Request instance, or manually instance a `Laragear\WebAuthn\JsonTransport` with the required data.
 
 ```php
 $assertion = AssertionValidation::fromRequest();
@@ -465,7 +472,7 @@ $assertion = AssertionValidation::fromRequest();
 $assertion = new AssertionValidation(new JsonTransport($request->json()->all()));
 ```
 
-For example, you may manually authenticate a user with its WebAuthn Credentials `AssertionValidator` pipeline. We can just type-hint a pipeline in a Controller action argument and Laravel will automatically inject the instance to it.
+Going back to the pipeline usage, let's imagine you want to manually authenticate a user with its WebAuthn Credentials. For that, you can type-hint the `AssertionValidator` pipeline in a Controller action argument and Laravel will automatically inject the instance to it.
 
 ```php
 use Laragear\WebAuthn\Assertion\Validator\AssertionValidation;
@@ -512,6 +519,29 @@ public function authenticate(Request $request, AssertionValidator $assertion)
 }
 ```
 
+Alternatively, you may add new pipes globally in the `register()` method of your `AppServiceProvider()` or `AuthServiceProvider()`, just by [extending the binding](https://laravel.com/docs/11.x/container#extending-bindings).
+
+```php
+namespace App\Providers;
+
+use Illuminate\Support\ServiceProvider;
+use Laragear\WebAuthn\Assertion\Validator\AssertionValidator;
+
+class AppServiceProvider extends ServiceProvider
+{
+    public function register()
+    {
+        $this->app->extend(AssertionValidator::class, function ($pipeline) {
+            return $pipeline->pipe([
+                \App\Auth\WebAuthn\CheckIfUserIsCool::class,
+                \App\Auth\WebAuthn\LoginUser::class,
+                \App\Auth\WebAuthn\SendLoginNotification::class,
+            ]);
+        })
+    }
+}
+```
+
 > [!WARNING]
 >
 > The pipes list and the pipes themselves are **not** covered by API changes, and are marked as `internal`. These may change between versions without notice.
@@ -520,9 +550,11 @@ public function authenticate(Request $request, AssertionValidator $assertion)
 
 ## Custom Challenge Repository
 
-Storing and pulling challenges is done through a _repository_. By default, this library includes a repository that uses your application Session, which is the most secure and easiest way to handle challenges.
+Storing and pulling challenges is done through a _repository_. By default, this library includes a repository that uses your application Session, which is the easiest and securer way to store and pull challenges.
 
-You may want to use your own, for example, like a shared cache between multiple application instances, or a custom database table. In any case, create a class implementing the `Laragear\WebAuthn\Contracts\WebAuthnChallengeRepository` contract (interface).
+You may want to use your own, for example, if you need to _share_ the challenges across multiple application instances, or a common database table. Whatever is your use case, start by creating a class implementing the `Laragear\WebAuthn\Contracts\WebAuthnChallengeRepository` contract.
+
+The class should be able to store a `Challenge` instance, and pull it if it exists. Note that whe it's pulled, the data is deleted from the repository.
 
 ```php
 namespace App\WebAuthn;
@@ -530,6 +562,10 @@ namespace App\WebAuthn;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Request;
+use Laragear\WebAuthn\Assertion\Creator\AssertionCreation;
+use Laragear\WebAuthn\Assertion\Validator\AssertionValidation;
+use Laragear\WebAuthn\Attestation\Creator\AttestationCreation;
+use Laragear\WebAuthn\Attestation\Validator\AttestationValidation;
 use Laragear\WebAuthn\Contracts\WebAuthnChallengeRepository;
 use Laragear\WebAuthn\Challenge\Challenge;
 
@@ -538,17 +574,17 @@ class MyRepository implements WebAuthnChallengeRepository
     /**
      * Puts a ceremony challenge into the repository.
      */
-    public function store(Challenge $challenge): void
+    public function store(Challenge $challenge, AttestationCreation|AssertionCreation $ceremony): void
     {  
-        Cache::store('redis')->put($fingerprint, $challenge, $challenge->expiresAt())
+        Cache::store('redis')->put($this->getFingerprint(), $challenge, $challenge->expiresAt())
     }
 
     /**
      * Pulls a ceremony challenge out from the repository, if it exists.
      */
-    public function pull(): ?Challenge
+    public function pull(AttestationValidation|AssertionValidation $ceremony): ?Challenge
     {      
-        return Cache::store('redis')->pull($fingerprint);
+        return Cache::store('redis')->pull($this->getFingerprint());
     }
     
     /**

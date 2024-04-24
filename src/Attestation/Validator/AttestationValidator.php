@@ -30,5 +30,6 @@ class AttestationValidator extends Pipeline
         Pipes\CheckUserInteraction::class,
         Pipes\CredentialIdShouldNotBeDuplicated::class,
         Pipes\MakeWebAuthnCredential::class,
+        Pipes\FireCredentialAttestedEvent::class,
     ];
 }

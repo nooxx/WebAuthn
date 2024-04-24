@@ -15,6 +15,7 @@ use Laragear\WebAuthn\Assertion\Validator\Pipes\CheckUserInteraction;
 use Laragear\WebAuthn\Attestation\AuthenticatorData;
 use Laragear\WebAuthn\ByteBuffer;
 use Laragear\WebAuthn\Challenge\Challenge;
+use Laragear\WebAuthn\Events\CredentialAsserted;
 use Laragear\WebAuthn\Events\CredentialCloned;
 use Laragear\WebAuthn\Events\CredentialDisabled;
 use Laragear\WebAuthn\Exceptions\AssertionException;
@@ -27,7 +28,6 @@ use Tests\DatabaseTestCase;
 use Tests\FakeAuthenticator;
 use Tests\Stubs\WebAuthnAuthenticatableUser;
 use Throwable;
-
 use function base64_decode;
 use function base64_encode;
 use function json_encode;
@@ -690,5 +690,31 @@ hQIDAQAB
 
             throw $e;
         }
+    }
+
+    public function test_assertion_dispatches_event_with_user()
+    {
+        $event = Event::fake(CredentialAsserted::class);
+
+        $this->validate();
+
+        $event->assertDispatched(CredentialAsserted::class, function (CredentialAsserted $event): bool {
+            return $event->user === $this->user
+                && $this->validation->credential === $event->credential;
+        });
+    }
+
+    public function test_assertion_dispatches_event_without_user()
+    {
+        $event = Event::fake(CredentialAsserted::class);
+
+        $this->validation->user = null;
+
+        $this->validator->send($this->validation)->thenReturn();
+
+        $event->assertDispatched(CredentialAsserted::class, function (CredentialAsserted $event): bool {
+            return $event->user === null
+                && $this->validation->credential === $event->credential;
+        });
     }
 }
