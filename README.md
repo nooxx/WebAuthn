@@ -406,9 +406,9 @@ You may disable the fallback to only allow WebAuthn authentication by [setting `
 
 During assertion, the package will automatically detect if a Credential has been cloned by comparing how many times the user has logged in with it.
 
-When it's detected as cloned, the Credential will be immediately disabled, a [`CredentialCloned`](#events) event will be fired, and the Assertion gets denied.
+When it's detected as cloned, the Credential will be immediately disabled and the Assertion will be denied.
 
-You can use the event to warn the user.
+Additionally, the [`CredentialCloned`](#events) event will be fired, which you can use to warn the user.
 
 ```php
 use Illuminate\Support\Facades\Event;
@@ -421,6 +421,7 @@ Event::listen(CredentialCloned::class, function ($cloned) {
     $cloned->credential->user->notify($notification);
 });
 ```
+
 ## Managing Credentials
 
 The purpose of the `WebAuthnAuthenticatable` contract is to allow managing credentials within the User instance. The most useful methods are:
@@ -435,7 +436,7 @@ You can use these methods to, for example, find a credential to blacklist, or di
 
 ## Events
 
-The following events are fired by this package, which you can [hook into in your application](https://laravel.com/docs/11.x/events):
+The following events are fired by this package, which you can [listen to in your application](https://laravel.com/docs/11.x/events):
 
 | Event                | Description                                                           |
 |----------------------|-----------------------------------------------------------------------|
@@ -461,15 +462,15 @@ If you want to manually Attest and Assert users, for example to create users at 
 > 
 > The `AttestationValidator` instances a storable credential, it doesn't save it. This way you have the chance to alter the model with additional data before persisting.
 
-Compared to prior versions, these pipelines no longer require the current Request instance. Instead, these work with the JSON input of the request. 
+Compared to prior versions, the validation data to pass through `AttestationValidator` and `AssertionValidator` no longer require the current Request instance. Instead, these only need the JSON array. 
 
-You can either use the `fromRequest()` helper, which will extract the required WebAuthn data from the current or issued Request instance, or manually instance a `Laragear\WebAuthn\JsonTransport` with the required data.
+If you prefer, you can still use the `fromRequest()` helper, which will extract the required WebAuthn data from the current or issued Request instance, or manually instance a `Laragear\WebAuthn\JsonTransport` with the required data.
 
 ```php
 $assertion = AssertionValidation::fromRequest();
 
 // Same as...
-$assertion = new AssertionValidation(new JsonTransport($request->json()->all()));
+$assertion = new AssertionValidation(new JsonTransport($request->json([ /* required keys */ ])));
 ```
 
 Going back to the pipeline usage, let's imagine you want to manually authenticate a user with its WebAuthn Credentials. For that, you can type-hint the `AssertionValidator` pipeline in a Controller action argument and Laravel will automatically inject the instance to it.
