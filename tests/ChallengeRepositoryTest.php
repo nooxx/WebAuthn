@@ -6,6 +6,7 @@ use Illuminate\Contracts\Session\Session as SessionContract;
 use Laragear\WebAuthn\ByteBuffer;
 use Laragear\WebAuthn\Challenge\Challenge;
 use Laragear\WebAuthn\Challenge\SessionChallengeRepository;
+
 use function now;
 
 class ChallengeRepositoryTest extends TestCase
