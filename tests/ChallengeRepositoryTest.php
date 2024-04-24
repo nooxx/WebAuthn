@@ -3,10 +3,12 @@
 namespace Tests;
 
 use Illuminate\Contracts\Session\Session as SessionContract;
+use Laragear\WebAuthn\Assertion\Creator\AssertionCreation;
+use Laragear\WebAuthn\Assertion\Validator\AssertionValidation;
 use Laragear\WebAuthn\ByteBuffer;
 use Laragear\WebAuthn\Challenge\Challenge;
 use Laragear\WebAuthn\Challenge\SessionChallengeRepository;
-
+use Laragear\WebAuthn\JsonTransport;
 use function now;
 
 class ChallengeRepositoryTest extends TestCase
@@ -27,7 +29,7 @@ class ChallengeRepositoryTest extends TestCase
                 return true;
             });
 
-        $this->app->make(SessionChallengeRepository::class)->store($challenge);
+        $this->app->make(SessionChallengeRepository::class)->store(new AssertionCreation(null), $challenge);
     }
 
     public function test_stores_challenge_with_options(): void
@@ -43,7 +45,7 @@ class ChallengeRepositoryTest extends TestCase
                 return true;
             });
 
-        $this->app->make(SessionChallengeRepository::class)->store($challenge);
+        $this->app->make(SessionChallengeRepository::class)->store(new AssertionCreation(null), $challenge);
     }
 
     public function test_pulls_valid_challenge(): void
@@ -55,7 +57,8 @@ class ChallengeRepositoryTest extends TestCase
             ->with('_webauthn')
             ->andReturn($challenge);
 
-        static::assertSame($challenge, $this->app->make(SessionChallengeRepository::class)->pull());
+        static::assertSame($challenge,
+            $this->app->make(SessionChallengeRepository::class)->pull(new AssertionValidation(new JsonTransport())));
     }
 
     public function test_pulls_doesnt_return_non_existent_challenge(): void
@@ -67,7 +70,7 @@ class ChallengeRepositoryTest extends TestCase
             ->with('_webauthn')
             ->andReturn($challenge);
 
-        static::assertNull($this->app->make(SessionChallengeRepository::class)->pull());
+        static::assertNull($this->app->make(SessionChallengeRepository::class)->pull(new AssertionValidation(new JsonTransport())));
     }
 
     public function test_pulls_doesnt_return_expired_challenge(): void
@@ -77,6 +80,6 @@ class ChallengeRepositoryTest extends TestCase
             ->with('_webauthn')
             ->andReturnNull();
 
-        static::assertNull($this->app->make(SessionChallengeRepository::class)->pull());
+        static::assertNull($this->app->make(SessionChallengeRepository::class)->pull(new AssertionValidation(new JsonTransport())));
     }
 }

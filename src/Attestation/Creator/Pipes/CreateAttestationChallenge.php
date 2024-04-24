@@ -40,7 +40,7 @@ class CreateAttestationChallenge
         $attestable->json->set('timeout', $challenge->timeout * 1000);
         $attestable->json->set('challenge', $challenge->data);
 
-        $this->challenge->store($challenge);
+        $this->challenge->store($attestable, $challenge);
 
         return $next($attestable);
     }

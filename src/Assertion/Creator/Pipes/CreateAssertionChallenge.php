@@ -42,7 +42,7 @@ class CreateAssertionChallenge
 
         $assertion->json->set('challenge', $challenge->data);
 
-        $this->challenge->store($challenge);
+        $this->challenge->store($assertion, $challenge);
 
         return $next($assertion);
     }

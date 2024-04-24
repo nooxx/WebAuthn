@@ -4,6 +4,10 @@ namespace Laragear\WebAuthn\Challenge;
 
 use Illuminate\Contracts\Config\Repository as ConfigContract;
 use Illuminate\Contracts\Session\Session as SessionContract;
+use Laragear\WebAuthn\Assertion\Creator\AssertionCreation;
+use Laragear\WebAuthn\Assertion\Validator\AssertionValidation;
+use Laragear\WebAuthn\Attestation\Creator\AttestationCreation;
+use Laragear\WebAuthn\Attestation\Validator\AttestationValidation;
 use Laragear\WebAuthn\Contracts\WebAuthnChallengeRepository;
 
 /**
@@ -22,7 +26,7 @@ class SessionChallengeRepository implements WebAuthnChallengeRepository
     /**
      * Puts a ceremony challenge into the repository.
      */
-    public function store(Challenge $challenge): void
+    public function store(AttestationCreation|AssertionCreation $ceremony, Challenge $challenge): void
     {
         $this->session->put($this->config->get('webauthn.challenge.key'), $challenge);
     }
@@ -32,7 +36,7 @@ class SessionChallengeRepository implements WebAuthnChallengeRepository
      *
      * It will not return if it has expired not expired.
      */
-    public function pull(): ?Challenge
+    public function pull(AttestationValidation|AssertionValidation $ceremony): ?Challenge
     {
         /** @var \Laragear\WebAuthn\Challenge\Challenge|null $challenge */
         $challenge = $this->session->pull($this->config->get('webauthn.challenge.key'));
