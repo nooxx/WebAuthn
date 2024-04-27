@@ -6,12 +6,12 @@ use Illuminate\Http\Request;
 use Illuminate\Testing\TestResponse;
 use Laragear\WebAuthn\Assertion\Creator\AssertionCreation;
 use Laragear\WebAuthn\Assertion\Creator\AssertionCreator;
+use Laragear\WebAuthn\ByteBuffer;
 use Laragear\WebAuthn\Challenge\Challenge;
 use Laragear\WebAuthn\Enums\UserVerification;
 use Ramsey\Uuid\Uuid;
 use Tests\DatabaseTestCase;
 use Tests\Stubs\WebAuthnAuthenticatableUser;
-
 use function config;
 use function in_array;
 use function now;
@@ -187,6 +187,18 @@ class CreatorTest extends DatabaseTestCase
         $this->response()
             ->assertSessionHas('_webauthn', function (Challenge $challenge): bool {
                 return in_array('test_id', $challenge->properties['credentials'], true);
+            });
+    }
+
+    public function test_accepts_custom_challenge(): void
+    {
+        $this->creation->user = $this->user;
+
+        $this->creation->challenge = new Challenge(new ByteBuffer('1'), 10);
+
+        $this->response()
+            ->assertSessionHas('_webauthn', function (Challenge $challenge): bool {
+                return $challenge->data->hashEqual('1');
             });
     }
 }

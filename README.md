@@ -467,6 +467,8 @@ Compared to prior versions, the validation data to pass through `AttestationVali
 If you prefer, you can still use the `fromRequest()` helper, which will extract the required WebAuthn data from the current or issued Request instance, or manually instance a `Laragear\WebAuthn\JsonTransport` with the required data.
 
 ```php
+use Laragear\WebAuthn\Assertion\Validator\AssertionValidation;
+
 $assertion = AssertionValidation::fromRequest();
 
 // Same as...
@@ -549,7 +551,41 @@ class AppServiceProvider extends ServiceProvider
 
 ## [Migrations](MIGRATIONS.md)
 
-## Custom Challenge Repository
+## Challenges
+
+Challenges are primordial to each WebAuthn ceremony. It's the only way to check if both the authenticator and application (Relying Party) have the same cryptographical key pair.
+
+While this library works using known secure defaults, you can change how challenges are created, and how these are managed from a given store.
+
+### Custom Challenges
+
+Challenges are created automatically using the library configuration. Most of the time, you won't need to change how a Challenge is created.
+
+There may be some scenarios where you will want to create a custom challenge. For example, you need to base it on predefined piece of data, or especial properties for specific devices. You may add your own Challenge, with the Byte Buffer required to be transmitted, to the data being passed to the [`AttestationCreator` and `AssertionCreator` pipelines](#manually-attesting-and-asserting).
+
+```php
+use FIDO\Generator;
+use Laragear\WebAuthn\Attestation\Creator\AttestationCreation;
+use Laragear\WebAuthn\Attestation\Creator\AttestationCreator;
+use Laragear\WebAuthn\Challenge\Challenge;
+
+public function create(Request $request, AttestationCreator $assertion)
+{
+    $byteBuffer = Generator::lowPowerRandom();
+    
+    $creation = new AttestationCreation(
+        user: $request->user(),
+        challenge: Challenge::make($byteBuffer, 60) 
+    );
+
+    return $assertion
+        ->send($creation)
+        ->thenReturn()
+        ->json;
+}
+```
+
+### Custom Challenge Repository
 
 Storing and pulling challenges is done through a _repository_. By default, this library includes a repository that uses your application Session, which is the easiest and securer way to store and pull challenges.
 

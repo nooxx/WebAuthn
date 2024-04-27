@@ -52,4 +52,9 @@ class Challenge
     {
         return new static(ByteBuffer::makeRandom($length), $timeout, $verify, $options);
     }
+
+    public static function make(string $binary, int $timeout): static
+    {
+        return new static(new ByteBuffer($binary), $timeout);
+    }
 }

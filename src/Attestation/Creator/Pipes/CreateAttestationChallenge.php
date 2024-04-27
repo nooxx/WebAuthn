@@ -27,20 +27,21 @@ class CreateAttestationChallenge
      */
     public function handle(AttestationCreation $attestable, Closure $next): mixed
     {
-        $challenge = Challenge::random(
+        $attestable->challenge ??= Challenge::random(
             $this->config->get('webauthn.challenge.bytes'),
-            $this->config->get('webauthn.challenge.timeout'),
-            $attestable->userVerification === UserVerification::REQUIRED,
-            [
-                'user_uuid' => $attestable->json->get('user.id'),
-                'user_handle' => $attestable->json->get('user.name'),
-            ]
+            $this->config->get('webauthn.challenge.timeout')
         );
 
-        $attestable->json->set('timeout', $challenge->timeout * 1000);
-        $attestable->json->set('challenge', $challenge->data);
+        $attestable->challenge->verify = $attestable->userVerification === UserVerification::REQUIRED;
+        $attestable->challenge->properties = [
+            'user_uuid' => $attestable->json->get('user.id'),
+            'user_handle' => $attestable->json->get('user.name'),
+        ];
 
-        $this->challenge->store($attestable, $challenge);
+        $attestable->json->set('timeout', $attestable->challenge->timeout * 1000);
+        $attestable->json->set('challenge', $attestable->challenge->data);
+
+        $this->challenge->store($attestable, $attestable->challenge);
 
         return $next($attestable);
     }

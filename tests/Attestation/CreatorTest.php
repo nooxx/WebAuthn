@@ -7,6 +7,7 @@ use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
 use Laragear\WebAuthn\Attestation\Creator\AttestationCreation;
 use Laragear\WebAuthn\Attestation\Creator\AttestationCreator;
+use Laragear\WebAuthn\ByteBuffer;
 use Laragear\WebAuthn\Challenge\Challenge;
 use Laragear\WebAuthn\Enums\ResidentKey;
 use Laragear\WebAuthn\Enums\UserVerification;
@@ -14,7 +15,6 @@ use Ramsey\Uuid\Uuid;
 use Tests\DatabaseTestCase;
 use Tests\Stubs\WebAuthnAuthenticatableUser;
 use UnexpectedValueException;
-
 use function config;
 use function now;
 use function session;
@@ -203,5 +203,17 @@ class CreatorTest extends DatabaseTestCase
         ])->save();
 
         $this->response()->assertJsonMissing(['excludeCredentials']);
+    }
+
+    public function test_accepts_custom_challenge(): void
+    {
+        $this->creation->user = $this->user;
+
+        $this->creation->challenge = new Challenge(new ByteBuffer('1'), 10);
+
+        $this->response()
+            ->assertSessionHas('_webauthn', function (Challenge $challenge): bool {
+                return $challenge->data->hashEqual('1');
+            });
     }
 }
