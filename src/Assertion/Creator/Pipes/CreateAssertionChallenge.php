@@ -35,9 +35,8 @@ class CreateAssertionChallenge
         $assertion->challenge->verify = $assertion->userVerification === UserVerification::REQUIRED;
 
         if ($assertion->acceptedCredentials?->isNotEmpty()) {
-            // @phpstan-ignore-next-line
             $assertion->challenge->properties['credentials'] = $assertion->acceptedCredentials
-                ->map(static function (WebAuthnCredential $credential): string {
+                ->map(static function (WebAuthnCredential $credential): string { // @phpstan-ignore-line
                     return $credential->getKey();
                 })->toArray();
         }
