@@ -472,7 +472,9 @@ use Laragear\WebAuthn\Assertion\Validator\AssertionValidation;
 $assertion = AssertionValidation::fromRequest();
 
 // Same as...
-$assertion = new AssertionValidation(new JsonTransport($request->json([ /* required keys */ ])));
+$assertion = new AssertionValidation(
+    new JsonTransport($request->json(AssertionValidation::REQUEST_KEYS))
+);
 ```
 
 Going back to the pipeline usage, let's imagine you want to manually authenticate a user with its WebAuthn Credentials. For that, you can type-hint the `AssertionValidator` pipeline in a Controller action argument and Laravel will automatically inject the instance to it.
@@ -499,12 +501,13 @@ Since these are Laravel Pipelines, you're free to push additional pipes. These p
 
 ```php
 use Laragear\WebAuthn\Assertion\Validator\AssertionValidator;
+use Laragear\WebAuthn\Assertion\Validator\AssertionValidation;
 use Exception;
 
 public function authenticate(Request $request, AssertionValidator $assertion)
 {
     $credential = $assertion
-        ->send(new AssertionValidation($request))
+        ->send(AssertionValidation::fromRequest($request))
         // Add new pipes to the validation.
         ->pipe(function($validation, $next) {
             if ($validation->user?->isNotAwesome()) {
@@ -547,7 +550,7 @@ class AppServiceProvider extends ServiceProvider
 
 > [!WARNING]
 >
-> The pipes list and the pipes themselves are **not** covered by API changes, and are marked as `internal`. These may change between versions without notice.
+> The pipes list and the pipes themselves are **not covered by API changes**, and are marked as `internal`. These may change between minor or patch versions without notice. 
 
 ## [Migrations](MIGRATIONS.md)
 
@@ -737,7 +740,7 @@ If you think WebAuthn is critical for these packages, [consider supporting this 
 
 * **Does this work with any browser?**
 
-[Yes](https://caniuse.com/#feat=webauthn). In the case of old browsers, you should have a fallback detection script. This can be asked with [the included JavaScript helper](#5-use-the-javascript-helper) in a breeze:
+[Yes](https://caniuse.com/#feat=webauthn). In the case of ancient browsers, you should have a fallback detection script. This can be asked with [the included JavaScript helper](#5-use-the-javascript-helper) in a breeze:
 
 ```javascript
 if (WebAuthn.isNotSupported()) {
@@ -747,27 +750,35 @@ if (WebAuthn.isNotSupported()) {
 
 * **Does this store the user fingerprints, PINs or patterns in my site?**
 
-No. WebAuthn only stores a cryptographic public key generated randomly by the device.
+No, these are stored on-device and remain there.
 
-* **Can a phishing site steal WebAuthn credentials and use them in my site to impersonate an user?**
+WebAuthn only stores a cryptographic public key generated randomly by the device.
 
-No. WebAuthn _kills the phishing_ because, unlike passwords, the private key never leaves the device, and the key-pair is bound to the top-most domain it was registered.
+* **Can a phishing site steal WebAuthn credentials and use them in my site to impersonate a user?**
 
-An user bing _phished_ at `staetbank.com` won't be able to login with a key made on the legit site `statebank.com`, as the device won't be able to find it.
+No, WebAuthn _kills the phishing_.
+
+Unlike passwords, the private key never leaves the device, and the key-pair is bound to the top-most domain it was registered.
+
+A user being _phished_ at `staetbank.com` won't be able to log in with a key made on the legit site `statebank.com`, as the device won't be able to find it.
 
 * **Can WebAuthn data identify a particular device?**
 
-No, unless explicitly [requested](https://www.w3.org/TR/webauthn-2/#attestation-conveyance) and consented. This package doesn't support other attestation conveyances than `none`, so it's never transmitted.
+No, unless explicitly [requested](https://www.w3.org/TR/webauthn-2/#attestation-conveyance) and consented.
+
+This package doesn't support other attestation conveyances than `none`, so that data is not received by the app.
 
 * **Are my user's classic passwords safe?**
 
-Yes, as long you are hashing them as you should. This is done by Laravel by default. You can also [disable them](#password-fallback).
+Yes, as long you are hashing them as you should. This is done by Laravel by default. 
+
+You can also [disable them](#password-fallback) and make your site only compatible with WebAuthn.
 
 * **Can a user register two or more different _devices_ for the same account?**
 
 Yes.
 
-* **Can a user register two or more credentials in the same device?**
+* **Can a user register two or more _credentials_ in the same device?**
 
 Not by default, but [you can enable it](#multiple-credentials-per-device).
 
@@ -777,11 +788,15 @@ Yes. If you're not using a [password fallback](#password-fallback), you may need
 
 * **What's the difference between disabling and deleting a credential?**
 
-Disabling a credential doesn't delete it, so it's useful as a blacklisting mechanism and these can also be re-enabled. When the credential is deleted, it goes away forever from the server, so the credential in the authenticator device becomes orphaned.
+Disabling a credential doesn't delete it, so it's useful as a blacklisting mechanism and these can also be re-enabled.
 
-* **Can a user delete its credentials from its device?**
+When the credential is deleted, it goes away forever from the server, so the credential in the authenticator device becomes orphaned.
 
-Yes. If it does, the other part of the credentials in your server gets orphaned. You may want to show the user a list of registered credentials in the application to delete them.
+* **Can I delete a credential from the user device?**
+
+No, there is no protocol in WebAuthn to delete a credential from the authenticator.
+
+That process must be done manually by the user in his device, and will vary depending on the browser, OS and device hardware.
 
 * **How secure is this against passwords or 2FA?**
 
@@ -817,7 +832,9 @@ Yes, public keys are encrypted when saved into the database with your app key.
 
 * **I changed my `APP_KEY` and nobody can log in**
 
-Since public keys are encrypted with your app key, older public keys will become useless. To change that, create a console command that decrypts (with the old key) and re-encrypts the `public_key` column of the table where the authentication data is.
+Laravel 11.x includes a [key rotation mechanism](https://laravel.com/docs/11.x/encryption#gracefully-rotating-encryption-keys) to avoid locking out all your users if you change your `APP_KEY`.
+
+Older Laravel versions will require re-encryption. You will have to manually create a console command that decrypts (with the old key) and re-encrypts (with the new key) the `public_key` column of the table where the authentication data is.
 
 * **Does this include WebAuthn credential recovery routes?**
 
@@ -827,7 +844,7 @@ My recommendation is to email the user, pointing to a route that registers a new
 
 * **Can I use my smartphone as authenticator through my PC or Mac?**
 
-Usually.
+Sometimes.
 
 While this is entirely up to hardware, OS and browser vendor themselves, modern _platforms_ will show a QR code, push notification, or ask to bring closer your smartphone to complete the WebAuthn ceremony. Please check your target platforms of choice.
 
@@ -839,7 +856,7 @@ You may [check this site for authenticator support](https://webauthn.me/browser-
 
 * **Why my device doesn't work at all with this package?**
 
-This package supports WebAuthn 2.0, which is [W3C Recommendation](https://www.w3.org/TR/webauthn-2). Your device/OS/browser may be using an unsupported version. 
+This package supports WebAuthn 2.0, which is [W3C Recommendation](https://www.w3.org/TR/webauthn-2). Your device/OS/browser may be using an unsupported version.
 
 There are no plans to support older WebAuthn specs. The new [WebAuthn 3.0 draft](https://www.w3.org/TR/webauthn-3) spec needs to be finished to be supported.
 
@@ -849,17 +866,17 @@ Use `localhost` exclusively (not `127.0.0.1` or `::1`) or use a proxy to tunnel 
 
 * **Why this package supports only `none` attestation conveyance?**
 
-Because `direct`, `indirect` and `enterprise` attestations are mostly used on high-security high-risk scenarios, where an entity has total control on the devices used to authenticate. Imagine banks, medical, or military.
+Because `direct`, `indirect` and `enterprise` attestations are mostly used on high-security high-risk scenarios, where an entity has total control on the devices used to authenticate. Imagine government, finance, medical, or military.
 
 If you deem this feature critical for you, [**consider supporting this package**](#become-a-sponsor).
 
 * **Can I allow logins with only USB keys?**
 
-No. The user can use whatever to authenticate in your app. This may be enabled on future versions.
+No. Is encouraged to use whatever to authenticate in your app.
 
 * **Everytime I make attestations or assertions, it says no challenge exists!** 
 
-Remember that your WebAuthn routes **must use Sessions**, because the Challenges are stored there.
+Remember that your WebAuthn routes **must use Sessions**, because the Challenges are stored there by default.
 
 Session are automatically started on the `web` route group, or using the `StartSession` middleware directly. You can check this on your [HTTP Kernel Middleware](https://laravel.com/docs/11.x/middleware#middleware-groups).
 
@@ -894,9 +911,10 @@ There should be no problems using this package with Laravel Octane.
 
 These are some details about this WebAuthn implementation you should be aware of.
 
-* Registration (attestation) and Login (assertion) challenges use the current request session.
+* Registration (attestation) and Login (assertion) challenges use the request session by default.
 * Only one ceremony can be done at a time, because ceremonies use the same challenge key. 
-* Challenges are pulled (retrieved and deleted from source) from the session on resolution, independently of their result.
+* Challenges are created with random bytes and checked on ceremony validation.
+* Challenges are pulled (retrieved and deleted from source) on resolution.
 * All challenges and ceremonies expire after 60 seconds.
 * WebAuthn User Handle is UUID v4.
 * User Handle is reused when a new credential for the same user is created.
