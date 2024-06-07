@@ -147,7 +147,9 @@ use Laragear\WebAuthn\Http\Routes as WebAuthnRoutes;
 Route::view('welcome');
 
 // WebAuthn Routes
-WebAuthnRoutes::register()->withoutMiddleware(VerifyCsrfToken::class);
+Route::withoutMiddleware([VerifyCsrfToken::class])->group(function () {
+    WebAuthnRoutes::register();
+});
 ```
 
 > [!TIP]
